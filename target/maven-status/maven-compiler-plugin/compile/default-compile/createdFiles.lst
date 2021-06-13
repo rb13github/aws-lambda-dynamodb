@@ -1,0 +1,3 @@
+org\rb\happylife\customers\handler\Handler.class
+org\rb\happylife\customers\model\Customer.class
+org\rb\happylife\customers\persistent\CustomersDB.class
