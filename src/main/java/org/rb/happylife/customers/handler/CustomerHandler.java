@@ -1,72 +1,59 @@
 package org.rb.happylife.customers.handler;
 
-import org.apache.logging.log4j.core.appender.ConsoleAppender;
+import com.amazonaws.services.lambda.runtime.Context;
 import org.rb.happylife.customers.model.BankCustomer;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
-import software.amazon.awssdk.enhanced.dynamodb.Key;
-import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
-import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbSortKey;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
-import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
-import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import org.rb.happylife.customers.persistent.BankCustomerDB;
+import org.rb.happylife.customers.utils.JSONUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.time.Duration;
 import java.time.Instant;
-import java.util.Iterator;
+import java.util.List;
 
 public class CustomerHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(CustomerHandler.class);
+
+   //The ISO 8601 standard defines textual formats for date-time values.
+    static Instant begin = Instant.now() ;  // Capture the current moment in UTC.
+    static Instant end = Instant.now() ;
+    static Instant mainbegin ;  // Capture the current moment in UTC.
+    static Instant mainend ;
+
     public static void main(String[] args) {
+        mainbegin = Instant.now();
+        logger.info("main:START  "+mainbegin);
 
-        Region region = Region.US_EAST_1;
-        DynamoDbClient ddb = DynamoDbClient.builder()
-                .region(region)
-                .build();
+        JSONUtils JSONUtilsObj = new JSONUtils();
+        BankCustomerDB aBankCustomerDB= new BankCustomerDB();
+        //end = Instant.now();
+        //logger.info("CustomerHandler.enhancedClient:created  Duration " +Duration.between( begin , end ));
 
-        DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
-                .dynamoDbClient(ddb)
-                .build();
+        List list = aBankCustomerDB.getCustomers();
+        logger.info("list: Result  " +list);
 
-        String result = getItem(enhancedClient);
-        System.out.println(result);
-        ddb.close();
+
+        BankCustomer aBankCustomer = aBankCustomerDB.getItem("101");
+        logger.info("getItem: Result  " +JSONUtilsObj.toJson(aBankCustomer));
+
+       // ddb.close();
+        mainend= Instant.now();
+        logger.info("main:END Duration  " +Duration.between( mainbegin , mainend ));
     }
 
-    // snippet-start:[dynamodb.java2.mapping.getitem.main]
-    public static String getItem(DynamoDbEnhancedClient enhancedClient) {
-        try {
-            //Create a DynamoDbTable object
-            DynamoDbTable<BankCustomer> mappedTable = enhancedClient.table("BankCustomer", TableSchema.fromBean(BankCustomer.class));
-            QueryConditional keyValue = QueryConditional.keyEqualTo(Key.builder().partitionValue("101").build());
-          //with sorted keys
-            //QueryConditional.keyEqualTo(Key.builder().partitionValue(roomid).sortValue(createdDate).build());
-            QueryEnhancedRequest enhancedRequest = QueryEnhancedRequest.builder()
-                      //      .filterExpression(expression)
-                    .queryConditional(keyValue)
-                .limit(15) // you can increase this value
-                .build();
 
-    // logger.info("CustomersDB.getCustomers: enhancedRequest  "+enhancedRequest.toString());
-    // Get items in the Customer table
-    Iterator<BankCustomer> customersIter = mappedTable.query(enhancedRequest).items().iterator();
+    public List handleRequest(Context context) {
 
-    while (customersIter.hasNext()) {
-        BankCustomer customerObj = customersIter.next();
-        String first = customerObj.getEmail();
-        System.out.println(first);
+        BankCustomerDB customersDB = new BankCustomerDB();
 
+        List ans =  customersDB.getCustomers();
 
-
-    }
-
-}catch (DynamoDbException e) {
-            System.err.println(e.getMessage());
-            System.exit(1);
+        if (null!=ans) {
+            logger.info("handleRequest Messages sent : " + ans);
         }
-        // snippet-end:[dynamodb.java2.mapping.getitem.main]
-        return "";
+        return ans;
     }
+
+
 
 }
